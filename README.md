@@ -40,7 +40,15 @@ ttslab install ./f5-tts --local
 
 ### Running out of disk space?
 
-You can o
+You can delete the `~/.ttslab` directory to free up space.
+
+### Uninstall TTSLab
+
+```bash
+pip uninstall ttslab
+rm -rf ~/.ttslab
+```
+
 
 ## License
 
