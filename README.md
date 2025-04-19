@@ -1,6 +1,9 @@
+> [!IMPORTANT]
+> This is still a very early WIP - not ready for use yet! More coming soon
+
 # TTSLab 🔬
 
-Run TTS models. Think ComfyUI but for TTS.
+Run TTS models from a web UI.
 
 ## Installation
 
