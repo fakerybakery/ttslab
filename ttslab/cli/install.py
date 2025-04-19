@@ -7,6 +7,8 @@ import os
 import json
 import shutil
 import rich
+import git
+import tempfile
 from ttslab.utils.storage import get_model_dir
 from ttslab.utils.environment import create_venv, install_packages
 
@@ -21,9 +23,14 @@ def install(model, local):
             raise click.ClickException(f"Local model directory {model} does not exist.")
         MODEL_DIR = model  # model directory to install from
     else:
-        raise NotImplementedError(
-            "Installing from a remote URL is not yet supported. Git cloning is coming soon. For now just clone the repo manually and install locally."
-        )
+        # git clone the repo to a temporary directory
+        try:
+            with tempfile.TemporaryDirectory() as tmpdir:
+                print(f"Cloning {model} to {tmpdir}...")
+                git.Repo.clone_from(model, tmpdir)
+                MODEL_DIR = tmpdir
+        except git.exc.GitCommandError as e:
+            raise click.ClickException(f"Failed to clone repository: {e}")
 
     # ensure manifest.json exists
 
