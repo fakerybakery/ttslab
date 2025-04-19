@@ -1,0 +1,12 @@
+{
+    "id": "f5_tts",
+    "name": "F5 TTS",
+    "version": "0.1.0",
+    "description": "F5-TTS model",
+    "author": "F5-TTS Team",
+    "license": "MIT",
+    "dependencies": [
+        "f5-tts"
+    ],
+    "use_uv": true
+}

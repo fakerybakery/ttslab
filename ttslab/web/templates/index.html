@@ -1,0 +1,1831 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TTSLab</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/wavesurfer.js@7/dist/wavesurfer.min.js"></script>
+    <style>
+        :root {
+            --primary: #4f46e5;
+            --primary-light: #6366f1;
+            --primary-dark: #3730a3;
+            --secondary: #10b981;
+            --secondary-light: #34d399;
+            --dark: #1f2937;
+            --darker: #111827;
+            --light: #f9fafb;
+            --gray: #e5e7eb;
+            --gray-dark: #9ca3af;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            --radius: 0.5rem;
+            --transition: all 0.2s ease-in-out;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--light);
+            color: var(--dark);
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 1rem;
+        }
+        
+        /* Loading Overlay */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(255, 255, 255, 0.9);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+            transition: opacity 0.3s ease-in-out, visibility 0.3s ease-in-out;
+        }
+        
+        .loading-overlay.hidden {
+            opacity: 0;
+            visibility: hidden;
+        }
+        
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid rgba(79, 70, 229, 0.2);
+            border-radius: 50%;
+            border-top-color: var(--primary);
+            animation: spin 1s linear infinite;
+            margin-bottom: 1rem;
+        }
+        
+        .loading-text {
+            font-size: 1.25rem;
+            font-weight: 500;
+            color: var(--primary);
+        }
+        
+        .loading-progress {
+            width: 300px;
+            height: 6px;
+            background-color: var(--gray);
+            border-radius: 9999px;
+            overflow: hidden;
+            margin-top: 1rem;
+        }
+        
+        .loading-progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary) 0%, var(--secondary) 100%);
+            width: 0%;
+            transition: width 0.3s ease;
+            border-radius: 9999px;
+        }
+        
+        /* Header */
+        .header {
+            padding: 1.5rem 0;
+            background-color: white;
+            box-shadow: var(--shadow);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        
+        .header-container {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+        
+        .logo svg {
+            width: 2.5rem;
+            height: 2.5rem;
+            fill: var(--primary);
+        }
+        
+        .logo h1 {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: var(--primary);
+            margin: 0;
+        }
+        
+        /* Main Content */
+        .main {
+            padding: 2rem 0;
+        }
+        
+        .card {
+            background-color: white;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            margin-bottom: 2rem;
+            overflow: hidden;
+            border: 1px solid var(--gray);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .card:hover {
+            box-shadow: var(--shadow-lg);
+        }
+        
+        .card-header {
+            padding: 1.25rem;
+            border-bottom: 1px solid var(--gray);
+            background-color: white;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .card-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--dark);
+            margin: 0;
+        }
+        
+        .card-body {
+            padding: 1.5rem;
+        }
+        
+        /* Model Selector */
+        .model-selector {
+            position: relative;
+        }
+        
+        .model-dropdown-button {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            background-color: white;
+            border: 1px solid var(--gray);
+            border-radius: var(--radius);
+            font-family: inherit;
+            font-size: 1rem;
+            font-weight: 500;
+            color: var(--dark);
+            text-align: left;
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .model-dropdown-button:hover {
+            border-color: var(--primary-light);
+        }
+        
+        .model-dropdown-button:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.2);
+        }
+        
+        .model-dropdown-button svg {
+            width: 1.25rem;
+            height: 1.25rem;
+            transition: transform 0.2s;
+        }
+        
+        .model-dropdown-button.active svg {
+            transform: rotate(180deg);
+        }
+        
+        /* Model Selection Modal */
+        .model-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s, visibility 0.3s;
+        }
+        
+        .model-modal-overlay.open {
+            opacity: 1;
+            visibility: visible;
+        }
+        
+        .model-modal {
+            background-color: white;
+            border-radius: var(--radius);
+            width: 90%;
+            max-width: 800px;
+            max-height: 90vh;
+            box-shadow: var(--shadow-lg);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            transform: translateY(20px);
+            transition: transform 0.3s;
+        }
+        
+        .model-modal-overlay.open .model-modal {
+            transform: translateY(0);
+        }
+        
+        .model-modal-header {
+            padding: 1.25rem;
+            border-bottom: 1px solid var(--gray);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .model-modal-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--dark);
+            margin: 0;
+        }
+        
+        .model-modal-close {
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: var(--gray-dark);
+            padding: 0.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: color 0.2s;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+        }
+        
+        .model-modal-close:hover {
+            color: var(--dark);
+            background-color: var(--gray);
+        }
+        
+        .model-modal-body {
+            flex: 1;
+            overflow-y: auto;
+            padding: 0 0 1.5rem;
+            max-height: 70vh;
+        }
+        
+        .model-search {
+            padding: 1rem;
+            border-bottom: 1px solid var(--gray);
+            position: sticky;
+            top: 0;
+            background-color: white;
+            z-index: 201;
+        }
+        
+        .model-search-input {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 1px solid var(--gray);
+            border-radius: var(--radius);
+            font-size: 0.875rem;
+            transition: var(--transition);
+            font-family: inherit;
+        }
+        
+        .model-search-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.2);
+        }
+        
+        .model-packages {
+            padding: 0.5rem 0;
+        }
+        
+        .model-package {
+            margin-bottom: 0.5rem;
+        }
+        
+        .model-package-header {
+            padding: 0.75rem 1rem;
+            font-weight: 600;
+            color: var(--dark);
+            background-color: var(--light);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .model-package-info {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            flex: 1;
+        }
+        
+        .model-package-meta {
+            font-size: 0.75rem;
+            color: var(--gray-dark);
+            font-weight: normal;
+            margin-left: 0.5rem;
+        }
+        
+        .model-package-description {
+            font-size: 0.875rem;
+            color: var(--gray-dark);
+            font-weight: normal;
+            margin-top: 0.25rem;
+            display: none;
+        }
+        
+        .model-package-header:hover .model-package-description {
+            display: block;
+        }
+        
+        .model-package-header svg {
+            width: 1rem;
+            height: 1rem;
+            transition: transform 0.2s;
+        }
+        
+        .model-package-header.collapsed svg {
+            transform: rotate(-90deg);
+        }
+        
+        .model-list {
+            max-height: 300px;
+            overflow-y: auto;
+            transition: max-height 0.3s;
+        }
+        
+        .model-package.collapsed .model-list {
+            max-height: 0;
+            overflow: hidden;
+        }
+        
+        .model-item {
+            padding: 0.75rem 1.5rem;
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .model-item:hover {
+            background-color: var(--light);
+        }
+        
+        .model-item.selected {
+            background-color: rgba(79, 70, 229, 0.1);
+        }
+        
+        .model-item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 0.25rem;
+        }
+        
+        .model-item-name {
+            font-weight: 500;
+            color: var(--dark);
+        }
+        
+        .model-item-badge {
+            font-size: 0.75rem;
+            padding: 0.25rem 0.5rem;
+            border-radius: 9999px;
+            background-color: var(--primary-light);
+            color: white;
+            font-weight: 500;
+        }
+        
+        .model-item-badge.disabled {
+            background-color: var(--gray-dark);
+        }
+        
+        .model-item-description {
+            font-size: 0.875rem;
+            color: var(--gray-dark);
+        }
+        
+        /* TTS Interface */
+        .input-label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: var(--dark);
+        }
+        
+        .input-field {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 1px solid var(--gray);
+            border-radius: var(--radius);
+            font-size: 1rem;
+            transition: var(--transition);
+            margin-bottom: 1rem;
+            font-family: 'Inter', sans-serif;
+        }
+        
+        .input-field:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.2);
+        }
+        
+        textarea.input-field {
+            min-height: 120px;
+            resize: vertical;
+        }
+        
+        .file-upload {
+            margin-bottom: 1rem;
+        }
+        
+        .file-upload-label {
+            display: inline-block;
+            padding: 0.75rem 1.5rem;
+            background-color: var(--light);
+            border: 1px solid var(--gray);
+            border-radius: var(--radius);
+            font-weight: 500;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+        
+        .file-upload-label:hover {
+            background-color: var(--gray);
+        }
+        
+        .file-input {
+            position: absolute;
+            left: -9999px;
+            opacity: 0;
+            visibility: hidden;
+        }
+        
+        .file-name {
+            margin-left: 0.5rem;
+            font-size: 0.875rem;
+            color: var(--gray-dark);
+        }
+        
+        .btn {
+            display: inline-block;
+            padding: 0.75rem 1.5rem;
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            border-radius: var(--radius);
+            font-family: inherit;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+        
+        .btn:hover {
+            background-color: var(--primary-dark);
+        }
+        
+        .btn:disabled {
+            background-color: var(--gray-dark);
+            cursor: not-allowed;
+        }
+        
+        .btn-loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+        
+        .btn-spinner {
+            width: 1rem;
+            height: 1rem;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s linear infinite;
+        }
+        
+        .result-container {
+            margin-top: 1.5rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid var(--gray);
+        }
+        
+        .audio-player {
+            width: 100%;
+            margin-top: 0.5rem;
+        }
+        
+        /* Wavesurfer Custom Styles */
+        .wavesurfer-container {
+            background-color: var(--light);
+            border-radius: var(--radius);
+            padding: 1rem;
+            border: 1px solid var(--gray);
+        }
+
+        #waveform {
+            width: 100%;
+            height: 80px; /* Adjust height as needed */
+            margin-bottom: 1rem;
+        }
+
+        .player-controls {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .play-pause-btn {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .play-pause-btn:hover {
+            background-color: var(--primary-dark);
+        }
+        
+        .play-pause-btn svg {
+             width: 20px;
+             height: 20px;
+        }
+
+        .time-display {
+            font-size: 0.875rem;
+            color: var(--gray-dark);
+            font-family: monospace; /* Monospace for consistent spacing */
+        }
+        
+        /* Error Message Styles */
+        .error-container {
+            padding: 1rem;
+            background-color: #fee2e2;
+            border: 1px solid #ef4444;
+            border-radius: var(--radius);
+            color: #b91c1c;
+            margin-bottom: 1rem;
+            display: none;
+        }
+        
+        .error-title {
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .error-icon {
+            width: 24px;
+            height: 24px;
+        }
+        
+        .error-message {
+            font-size: 0.875rem;
+        }
+        
+        /* Form Component Styles */
+        .form-description {
+            font-size: 0.875rem;
+            color: var(--gray-dark);
+            margin-bottom: 0.5rem;
+        }
+        
+        .checkbox-container {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+        }
+        
+        .checkbox-input {
+            width: 1.25rem;
+            height: 1.25rem;
+            border-radius: 0.25rem;
+            border: 1px solid var(--gray);
+            appearance: none;
+            -webkit-appearance: none;
+            cursor: pointer;
+            position: relative;
+        }
+        
+        .checkbox-input:checked {
+            background-color: var(--primary);
+            border-color: var(--primary);
+        }
+        
+        .checkbox-input:checked::after {
+            content: '';
+            position: absolute;
+            left: 0.4rem;
+            top: 0.2rem;
+            width: 0.25rem;
+            height: 0.5rem;
+            border: solid white;
+            border-width: 0 2px 2px 0;
+            transform: rotate(45deg);
+        }
+        
+        .checkbox-label {
+            flex: 1;
+        }
+        
+        .radio-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+        }
+        
+        .radio-container {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+        
+        .radio-input {
+            width: 1.25rem;
+            height: 1.25rem;
+            border-radius: 50%;
+            border: 1px solid var(--gray);
+            appearance: none;
+            -webkit-appearance: none;
+            cursor: pointer;
+            position: relative;
+        }
+        
+        .radio-input:checked {
+            border-color: var(--primary);
+        }
+        
+        .radio-input:checked::after {
+            content: '';
+            position: absolute;
+            left: 0.3rem;
+            top: 0.3rem;
+            width: 0.55rem;
+            height: 0.55rem;
+            border-radius: 50%;
+            background-color: var(--primary);
+        }
+        
+        .range-container {
+            margin-bottom: 1rem;
+        }
+        
+        .range-input {
+            width: 100%;
+            margin: 0.5rem 0;
+        }
+        
+        .range-values {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.75rem;
+            color: var(--gray-dark);
+        }
+        
+        .range-value {
+            font-weight: 600;
+            color: var(--dark);
+            font-size: 0.875rem;
+            text-align: center;
+        }
+        
+        /* Log Container Styles */
+        .log-container {
+             margin-top: 1.5rem;
+             padding: 1rem;
+             background-color: var(--darker);
+             color: #d1d5db; /* Lighter gray for logs */
+             border-radius: var(--radius);
+             max-height: 300px;
+             overflow-y: auto;
+             border: 1px solid var(--dark);
+        }
+
+        .log-container h4 {
+            margin-top: 0;
+            margin-bottom: 0.75rem;
+            font-weight: 500;
+            color: white;
+        }
+        
+        #log-output {
+             font-family: monospace;
+             font-size: 0.8rem;
+             line-height: 1.4;
+             white-space: pre-wrap; /* Wrap long lines */
+             word-break: break-all; /* Break long words/lines */
+        }
+        
+        /* Empty State Styles */
+        .empty-state {
+            padding: 2rem;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 200px;
+        }
+        
+        .empty-state-icon {
+            font-size: 3rem;
+            color: var(--gray-dark);
+            margin-bottom: 1rem;
+        }
+        
+        .empty-state-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: var(--dark);
+        }
+        
+        .empty-state-message {
+            color: var(--gray-dark);
+            margin-bottom: 1rem;
+            max-width: 500px;
+        }
+        
+        .code-block {
+            background-color: var(--darker);
+            color: white;
+            padding: 1rem;
+            border-radius: var(--radius);
+            font-family: monospace;
+            margin: 1rem 0;
+            text-align: left;
+            width: 100%;
+            max-width: 500px;
+            overflow-x: auto;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .container {
+                padding: 0 1rem;
+            }
+            
+            .header-container {
+                flex-direction: column;
+                gap: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Loading Overlay -->
+    <div id="loading-overlay" class="loading-overlay">
+        <div class="loading-spinner"></div>
+        <p id="loading-text" class="loading-text">Loading Models...</p>
+        <div class="loading-progress">
+            <div id="loading-progress-bar" class="loading-progress-bar"></div>
+        </div>
+    </div>
+
+    <!-- Header -->
+    <header class="header">
+        <div class="container header-container">
+            <div class="logo">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                    <path d="M12 1c-5 0-9 4-9 9v7c0 1.66 1.34 3 3 3h3v-8H5v-2c0-3.87 3.13-7 7-7s7 3.13 7 7v2h-4v8h3c1.66 0 3-1.34 3-3v-7c0-5-4.03-9-9-9z"/>
+                </svg>
+                <h1>TTSLab</h1>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main">
+        <div class="container">
+            <!-- Model Selection Card -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Select a Model</h2>
+                </div>
+                <div class="card-body">
+                    <div class="model-selector">
+                        <button id="model-dropdown-button" class="model-dropdown-button">
+                            <span id="selected-model-display">No model selected</span>
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 011.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+                            </svg>
+                        </button>
+                    </div>
+                    
+                    <!-- Empty State for No Models -->
+                    <div id="no-models-message" style="display: none;" class="empty-state">
+                        <div class="empty-state-icon">📢</div>
+                        <h3 class="empty-state-title">No Models Found</h3>
+                        <p class="empty-state-message">Please install models using the TTSLab CLI tool.</p>
+                        <div class="code-block">
+                            <code id="install-command">ttslab install &lt;model-name&gt;</code>
+                        </div>
+                    </div>
+            </div>
+        </div>
+        
+            <!-- Model Selection Modal -->
+            <div id="model-modal-overlay" class="model-modal-overlay">
+                <div class="model-modal">
+                    <div class="model-modal-header">
+                        <h3 class="model-modal-title">Select a Model</h3>
+                        <button id="model-modal-close" class="model-modal-close">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <line x1="18" y1="6" x2="6" y2="18"></line>
+                                <line x1="6" y1="6" x2="18" y2="18"></line>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="model-modal-body">
+                        <div class="model-search">
+                            <input type="text" id="model-search-input" class="model-search-input" placeholder="Search models...">
+                        </div>
+                        <div id="model-packages" class="model-packages">
+                            <!-- Model packages will be populated here -->
+                        </div>
+                    </div>
+                </div>
+        </div>
+        
+            <!-- Text-to-Speech Card -->
+            <div id="tts-card" class="card" style="display: none;">
+                <div class="card-header">
+                    <h2 class="card-title">Text-to-Speech</h2>
+                </div>
+                <div class="card-body">
+                    <div id="error-container" class="error-container">
+                        <div class="error-title">
+                            <svg class="error-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+                            </svg>
+                            <span>Error</span>
+                        </div>
+                        <div id="error-message" class="error-message"></div>
+                    </div>
+                    
+            <form id="tts-form">
+                <div class="form-group">
+                            <label for="text-input" class="input-label">Enter text to synthesize</label>
+                            <textarea id="text-input" class="input-field" placeholder="Type your text here..." required></textarea>
+                </div>
+                
+                <div id="voice-cloning-container" class="form-group" style="display: none;">
+                            <label class="input-label">Voice Cloning</label>
+                            <div class="file-upload">
+                                <label for="audio-sample" class="file-upload-label">
+                            Upload Audio Sample
+                        </label>
+                                <input type="file" id="audio-sample" class="file-input" accept="audio/*">
+                        <span id="file-name" class="file-name">No file selected</span>
+                    </div>
+                </div>
+                
+                        <div id="additional-args-container" class="form-group">
+                            <!-- Additional arguments will be inserted here -->
+                        </div>
+                        
+                        <div class="form-actions">
+                    <button type="submit" id="generate-btn" class="btn" disabled>Generate Speech</button>
+                </div>
+                
+                        <div id="log-container" class="log-container" style="display: none;">
+                            <h4>Generation Logs:</h4>
+                            <pre id="log-output"></pre>
+                        </div>
+
+                        <div id="result-container" class="result-container" style="display: none;">
+                            <h3>Generated Audio</h3>
+                            <div id="audio-container" class="wavesurfer-container">
+                                <div id="waveform"></div>
+                                <div class="player-controls">
+                                    <button id="play-pause-btn" class="play-pause-btn" title="Play/Pause" type="button">
+                                        <svg fill="currentColor" viewBox="0 0 16 16" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg">
+                                            <path d="M11.596 8.697l-6.363 3.692c-.54.313-1.233-.066-1.233-.697V4.308c0-.63.692-1.01 1.233-.696l6.363 3.692a.802.802 0 010 1.393z"></path>
+                                        </svg>
+                                    </button>
+                                    <span class="time-display"><span id="current-time">0:00</span> / <span id="duration-time">0:00</span></span>
+                                </div>
+                            </div>
+                </div>
+            </form>
+        </div>
+    </div>
+        </div>
+    </main>
+    
+    <script>
+        // DOM Elements
+        const loadingOverlay = document.getElementById('loading-overlay');
+        const loadingText = document.getElementById('loading-text');
+        const loadingProgressBar = document.getElementById('loading-progress-bar');
+        const modelDropdownButton = document.getElementById('model-dropdown-button');
+        const modelModalOverlay = document.getElementById('model-modal-overlay');
+        const modelModalClose = document.getElementById('model-modal-close');
+        const modelSearchInput = document.getElementById('model-search-input');
+        const modelPackagesContainer = document.getElementById('model-packages');
+        const selectedModelDisplay = document.getElementById('selected-model-display');
+        const ttsCard = document.getElementById('tts-card');
+        const ttsForm = document.getElementById('tts-form');
+        const generateBtn = document.getElementById('generate-btn');
+        const voiceCloningContainer = document.getElementById('voice-cloning-container');
+        const additionalArgsContainer = document.getElementById('additional-args-container');
+        const audioSampleInput = document.getElementById('audio-sample');
+        const fileNameSpan = document.getElementById('file-name');
+        const resultContainer = document.getElementById('result-container');
+        const audioContainer = document.getElementById('audio-container');
+        const errorContainer = document.getElementById('error-container');
+        const errorMessage = document.getElementById('error-message');
+        const noModelsMessage = document.getElementById('no-models-message');
+        const installCommand = document.getElementById('install-command');
+        const logContainer = document.getElementById('log-container');
+        const logOutput = document.getElementById('log-output');
+        
+        // State
+        let allModels = [];
+        let allPackages = {};
+        let selectedPackage = null;
+                let selectedModel = null;
+                let selectedSubModel = null;
+                let wavesurfer = null; // Wavesurfer instance
+                let eventSource = null; // SSE connection
+                
+        // Show error message
+        function showError(message) {
+            errorMessage.textContent = message;
+            errorContainer.style.display = 'block';
+            
+            // Scroll to error container
+            errorContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+        
+        // Hide error message
+        function hideError() {
+            errorContainer.style.display = 'none';
+        }
+        
+        // Open modal when clicking the dropdown button
+        modelDropdownButton.addEventListener('click', () => {
+            modelModalOverlay.classList.toggle('open');
+            modelDropdownButton.classList.toggle('active');
+        });
+        
+        // Close modal with the X button
+        modelModalClose.addEventListener('click', () => {
+            modelModalOverlay.classList.remove('open');
+            modelDropdownButton.classList.remove('active');
+        });
+        
+        // Close modal when clicking on the overlay (outside the modal content)
+        modelModalOverlay.addEventListener('click', (e) => {
+            if (e.target === modelModalOverlay) {
+                modelModalOverlay.classList.remove('open');
+                modelDropdownButton.classList.remove('active');
+            }
+        });
+        
+        // Model search
+        modelSearchInput.addEventListener('input', (e) => {
+            const searchTerm = e.target.value.toLowerCase();
+            
+            // Clear and rebuild the packages with filtered models
+            modelPackagesContainer.innerHTML = '';
+            
+            Object.entries(allPackages).forEach(([packageName, packageData]) => {
+                // Filter the models in this package
+                const filteredModels = packageData.models.filter(model => 
+                    (model.name ? model.name.toLowerCase().includes(searchTerm) : false) || 
+                    (model.description ? model.description.toLowerCase().includes(searchTerm) : false)
+                );
+                
+                if (filteredModels.length > 0) {
+                    // Create package element
+                    buildPackageElement(packageName, {
+                        ...packageData,
+                        models: filteredModels
+                    });
+                }
+            });
+        });
+        
+        // Handle file selection
+        audioSampleInput.addEventListener('change', () => {
+            if (audioSampleInput.files.length > 0) {
+                fileNameSpan.textContent = audioSampleInput.files[0].name;
+                    } else {
+                fileNameSpan.textContent = 'No file selected';
+            }
+        });
+        
+        // Function to initialize Wavesurfer
+        function initializeWavesurfer(audioUrl) {
+             // --- Wavesurfer Integration ---
+             resultContainer.style.display = 'block';
+             logContainer.style.display = 'none'; // Hide logs once audio is ready
+             audioContainer.innerHTML = `
+                 <div id="waveform"></div>
+                 <div class="player-controls">
+                     <button id="play-pause-btn" class="play-pause-btn" title="Play/Pause" type="button">
+                          <svg fill="currentColor" viewBox="0 0 16 16" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg">
+                              <path d="M11.596 8.697l-6.363 3.692c-.54.313-1.233-.066-1.233-.697V4.308c0-.63.692-1.01 1.233-.696l6.363 3.692a.802.802 0 010 1.393z"></path>
+                          </svg>
+                      </button>
+                      <span class="time-display"><span id="current-time">0:00</span> / <span id="duration-time">0:00</span></span>
+                  </div>
+             `; // Recreate elements for new audio
+
+             const waveformContainer = document.getElementById('waveform');
+             const playPauseBtn = document.getElementById('play-pause-btn');
+             const currentTimeEl = document.getElementById('current-time');
+             const durationTimeEl = document.getElementById('duration-time');
+             const playIcon = '<svg fill="currentColor" viewBox="0 0 16 16" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M11.596 8.697l-6.363 3.692c-.54.313-1.233-.066-1.233-.697V4.308c0-.63.692-1.01 1.233-.696l6.363 3.692a.802.802 0 010 1.393z"></path></svg>';
+             const pauseIcon = '<svg fill="currentColor" viewBox="0 0 16 16" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M5.5 3.5A1.5 1.5 0 017 5v6a1.5 1.5 0 01-3 0V5a1.5 1.5 0 011.5-1.5zm5 0A1.5 1.5 0 0112 5v6a1.5 1.5 0 01-3 0V5a1.5 1.5 0 011.5-1.5z"></path></svg>';
+
+             if (wavesurfer) {
+                 wavesurfer.destroy();
+             }
+
+             wavesurfer = WaveSurfer.create({
+                 container: waveformContainer,
+                 waveColor: 'rgb(209 213 219)', // var(--gray)
+                 progressColor: 'rgb(79 70 229)', // var(--primary)
+                 url: audioUrl,
+                 height: 80,
+                 barWidth: 3,
+                 barGap: 2,
+                 barRadius: 2,
+                 cursorWidth: 1,
+                 cursorColor: '#333', // Darker cursor
+             });
+
+             playPauseBtn.onclick = () => {
+                 wavesurfer.playPause();
+             };
+             
+             wavesurfer.on('play', () => {
+                 playPauseBtn.innerHTML = pauseIcon;
+             });
+
+             wavesurfer.on('pause', () => {
+                 playPauseBtn.innerHTML = playIcon;
+             });
+
+             wavesurfer.on('finish', () => {
+                  playPauseBtn.innerHTML = playIcon; // Reset icon when finished
+                  wavesurfer.seekTo(0); // Go back to start
+              });
+
+             wavesurfer.on('ready', (duration) => {
+                 durationTimeEl.textContent = formatTime(duration);
+                 playPauseBtn.disabled = false; // Enable button once loaded
+             });
+
+             wavesurfer.on('audioprocess', (currentTime) => {
+                 currentTimeEl.textContent = formatTime(currentTime);
+             });
+
+             wavesurfer.on('error', (err) => {
+                 console.error('Wavesurfer error:', err);
+                 showError('Error loading or playing audio waveform: ' + err);
+             });
+             
+             // --- End Wavesurfer Integration ---
+        }
+
+        // TTS Form submission
+        ttsForm.addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    
+                    if (!selectedSubModel) return;
+                    
+            // Hide previous results/errors/logs
+            hideError();
+            resultContainer.style.display = 'none';
+            logContainer.style.display = 'none';
+            logOutput.textContent = ''; // Clear logs
+            if (wavesurfer) {
+                 wavesurfer.destroy();
+                 wavesurfer = null;
+            }
+            if (eventSource) {
+                 eventSource.close(); // Close previous connection if any
+                 eventSource = null;
+            }
+            
+            const textInput = document.getElementById('text-input').value;
+                    const formData = new FormData();
+            formData.append('text', textInput);
+            formData.append('model_id', selectedSubModel.id);
+                    
+                    if (selectedSubModel.voice_cloning && audioSampleInput.files.length > 0) {
+                formData.append('reference_audio', audioSampleInput.files[0]);
+            }
+            
+            // Collect additional arguments
+            const additionalArgs = {};
+            additionalArgsContainer.querySelectorAll('[data-arg-id]').forEach(input => {
+                const argId = input.dataset.argId;
+                let value;
+                
+                if (input.type === 'checkbox') {
+                    value = input.checked;
+                } else if (input.type === 'number' || input.type === 'range') {
+                    value = parseFloat(input.value);
+                } else {
+                    value = input.value;
+                }
+                
+                additionalArgs[argId] = value;
+            });
+            formData.append('additional_args', JSON.stringify(additionalArgs));
+            
+            // Update UI: Show loading state & disable model selection
+                    generateBtn.disabled = true;
+            modelDropdownButton.disabled = true; // Disable model selection
+            generateBtn.classList.add('btn-loading');
+            generateBtn.innerHTML = '<span class="btn-spinner"></span> Generating...';
+            logContainer.style.display = 'block'; // Show log container
+                    
+            // --- Start Synthesis Task --- 
+            fetch('/api/synthesize', { 
+                method: 'POST',
+                        body: formData
+                    })
+                    .then(response => {
+                        if (!response.ok) {
+                             // Handle HTTP errors before trying to parse JSON
+                             return response.text().then(text => {
+                                 throw new Error(`Server error: ${response.status} - ${text}`);
+                             });
+                        }
+                        return response.json(); // Expecting {"task_id": "..."}
+                    })
+                    .then(data => {
+                        if (!data.task_id) {
+                            throw new Error('Invalid response from server: Missing task_id');
+                        }
+                        const taskId = data.task_id;
+                        console.log('Synthesis task started with ID:', taskId);
+                        logOutput.textContent += `Task started (ID: ${taskId}). Waiting for logs...\n`;
+
+                        // --- Connect to SSE stream ---
+                        eventSource = new EventSource(`/stream/${taskId}`);
+
+                        eventSource.onopen = () => {
+                            console.log('SSE connection opened.');
+                            logOutput.textContent += 'Connected to log stream.\n';
+                        };
+
+                        eventSource.onmessage = (event) => {
+                            // Process log line - properly handle newlines
+                            const logLine = event.data;
+                            // Replace escaped newlines with actual newlines for display
+                            const formattedLine = logLine.replace(/\\n/g, '\n');
+                            logOutput.textContent += formattedLine;
+                            if (!formattedLine.endsWith('\n')) {
+                                logOutput.textContent += '\n'; // Ensure each log entry ends with newline
+                            }
+                            logContainer.scrollTop = logContainer.scrollHeight; // Auto-scroll
+                        };
+
+                        eventSource.addEventListener('complete', (event) => {
+                            console.log('SSE complete event received:', event.data);
+                            eventSource.close();
+                            eventSource = null;
+                            
+                            try {
+                                const resultData = JSON.parse(event.data);
+                                if (resultData.audio_url) {
+                                     logOutput.textContent += '\nSynthesis complete. Loading audio player...\n';
+                                     initializeWavesurfer(resultData.audio_url); // Initialize player with the URL
+                                } else {
+                                     throw new Error('Complete event missing audio_url.')
+                                }
+                            } catch (parseError) {
+                                 console.error('Error parsing complete event data:', parseError);
+                                 showError('Failed to process completion signal from server.');
+                            }
+                            
+                            // Reset UI state
+                        generateBtn.disabled = false;
+                            modelDropdownButton.disabled = false;
+                            generateBtn.classList.remove('btn-loading');
+                            generateBtn.textContent = 'Generate Speech';
+                        });
+
+                        eventSource.addEventListener('error', (event) => {
+                            console.log('SSE error event received:', event.data);
+                            eventSource.close();
+                            eventSource = null;
+                            let errorMessageText = 'An unknown error occurred during generation.';
+                            try {
+                                 const errorData = JSON.parse(event.data);
+                                 errorMessageText = errorData.message || errorMessageText;
+                            } catch (parseError) {
+                                 console.warn('Could not parse error event data:', parseError);
+                                 // Use raw data if parsing fails and it's not empty
+                                 if (event.data) { 
+                                       errorMessageText = `Server error: ${event.data}`;
+                                 }
+                            }
+                            showError(`Generation failed: ${errorMessageText}`);
+                            logOutput.textContent += `\nERROR: ${errorMessageText}\n`;
+                            logContainer.scrollTop = logContainer.scrollHeight;
+                            
+                            // Reset UI state
+                            generateBtn.disabled = false;
+                            modelDropdownButton.disabled = false;
+                            generateBtn.classList.remove('btn-loading');
+                            generateBtn.textContent = 'Generate Speech';
+                        });
+
+                        eventSource.onerror = (err) => {
+                            console.error('EventSource failed:', err);
+                            showError('Lost connection to log stream. Please try generating again.');
+                            if (eventSource) {
+                                eventSource.close(); // Ensure closure on generic errors
+                                eventSource = null;
+                            }
+                            // Reset UI state as the stream is broken
+                            generateBtn.disabled = false;
+                            modelDropdownButton.disabled = false;
+                            generateBtn.classList.remove('btn-loading');
+                            generateBtn.textContent = 'Generate Speech';
+                            logContainer.style.display = 'none'; // Hide log container on connection error
+                        };
+
+                    })
+                    .catch(error => {
+                         // Catches errors from the initial /api/synthesize fetch or JSON parsing
+                         console.error('Error starting synthesis task:', error);
+                         showError('Failed to start synthesis task: ' + error.message);
+                         
+                         // Reset UI state
+                        generateBtn.disabled = false;
+                         modelDropdownButton.disabled = false;
+                         generateBtn.classList.remove('btn-loading');
+                         generateBtn.textContent = 'Generate Speech';
+                         logContainer.style.display = 'none'; // Hide logs if initial request fails
+                    });
+                });
+                
+        // Build a package element
+        function buildPackageElement(packageName, packageData) {
+            const packageElement = document.createElement('div');
+            packageElement.className = 'model-package';
+            packageElement.dataset.package = packageName;
+            
+            // Package header
+            const packageHeader = document.createElement('div');
+            packageHeader.className = 'model-package-header';
+            
+            // Create info container
+            const packageInfo = document.createElement('div');
+            packageInfo.className = 'model-package-info';
+            
+            // Package name and version
+            const packageNameEl = document.createElement('div');
+            packageNameEl.textContent = packageData.displayName || packageName;
+            
+            // Add version if available
+            if (packageData.version) {
+                const packageMeta = document.createElement('span');
+                packageMeta.className = 'model-package-meta';
+                packageMeta.textContent = 'v' + packageData.version;
+                packageNameEl.appendChild(packageMeta);
+            }
+            
+            packageInfo.appendChild(packageNameEl);
+            
+            // Add description if available
+            if (packageData.description) {
+                const packageDesc = document.createElement('div');
+                packageDesc.className = 'model-package-description';
+                packageDesc.textContent = packageData.description;
+                packageInfo.appendChild(packageDesc);
+            }
+            
+            // Dropdown arrow
+            const packageArrow = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+            packageArrow.setAttribute('viewBox', '0 0 20 20');
+            packageArrow.setAttribute('fill', 'currentColor');
+            packageArrow.innerHTML = '<path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 011.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />';
+            
+            packageHeader.appendChild(packageInfo);
+            packageHeader.appendChild(packageArrow);
+            
+            // Toggle package collapse
+            packageHeader.addEventListener('click', () => {
+                packageElement.classList.toggle('collapsed');
+                packageHeader.classList.toggle('collapsed');
+            });
+            
+            // Model list
+            const modelList = document.createElement('div');
+            modelList.className = 'model-list';
+            
+            // Add models to list
+            packageData.models.forEach(model => {
+                const modelItem = document.createElement('div');
+                modelItem.className = 'model-item';
+                modelItem.dataset.modelId = model.id;
+                
+                // Model item header
+                const modelItemHeader = document.createElement('div');
+                modelItemHeader.className = 'model-item-header';
+                
+                // Model name
+                const modelItemName = document.createElement('div');
+                modelItemName.className = 'model-item-name';
+                modelItemName.textContent = model.name || model.id;
+                modelItemHeader.appendChild(modelItemName);
+                
+                // Voice cloning badge
+                const modelItemBadge = document.createElement('div');
+                modelItemBadge.className = `model-item-badge ${model.voice_cloning ? '' : 'disabled'}`;
+                modelItemBadge.textContent = model.voice_cloning ? 'Voice Cloning' : 'Standard TTS';
+                modelItemHeader.appendChild(modelItemBadge);
+                
+                // Model description
+                const modelItemDesc = document.createElement('div');
+                modelItemDesc.className = 'model-item-description';
+                modelItemDesc.textContent = model.description || 'No description available';
+                
+                // Add elements to model item
+                modelItem.appendChild(modelItemHeader);
+                modelItem.appendChild(modelItemDesc);
+                
+                // Handle model selection
+                modelItem.addEventListener('click', () => {
+                    // Update selected state
+                    document.querySelectorAll('.model-item').forEach(item => {
+                        item.classList.remove('selected');
+                    });
+                    modelItem.classList.add('selected');
+                                    
+                                    // Update selected model
+                    selectedPackage = packageName;
+                    selectedSubModel = model;
+                    
+                    // Update UI
+                    selectedModelDisplay.textContent = `${model.parentModelDisplay || packageName || 'Selected model'}: ${model.name || model.id || 'Unknown'}`;
+                    modelModalOverlay.classList.remove('open');
+                    modelDropdownButton.classList.remove('active');
+                    
+                    // Enable TTS form
+                    ttsCard.style.display = 'block';
+                    generateBtn.disabled = false;
+                    
+                    // Toggle voice cloning UI
+                    if (model.voice_cloning) {
+                        voiceCloningContainer.style.display = 'block';
+                    } else {
+                        voiceCloningContainer.style.display = 'none';
+                        audioSampleInput.value = '';
+                        fileNameSpan.textContent = 'No file selected';
+                    }
+                    
+                    // Setup additional args
+                    setupAdditionalArgs(model);
+                });
+                
+                modelList.appendChild(modelItem);
+            });
+            
+            packageElement.appendChild(packageHeader);
+            packageElement.appendChild(modelList);
+            modelPackagesContainer.appendChild(packageElement);
+        }
+        
+        // Setup additional arguments with different input types
+        function setupAdditionalArgs(model) {
+            additionalArgsContainer.innerHTML = '';
+            
+            if (Array.isArray(model.additional_args)) {
+                model.additional_args.forEach(arg => {
+                    const fieldContainer = document.createElement('div');
+                    fieldContainer.className = 'form-group';
+                    
+                    // Create label except for checkbox type which is handled differently
+                    if (arg.type !== 'checkbox') {
+                        const label = document.createElement('label');
+                        label.htmlFor = `additional-arg-${arg.id}`;
+                        label.className = 'input-label';
+                        label.textContent = arg.name;
+                        fieldContainer.appendChild(label);
+                    }
+                    
+                    // Add description if available
+                    if (arg.description) {
+                        const description = document.createElement('p');
+                        description.className = 'form-description';
+                        description.textContent = arg.description;
+                        fieldContainer.appendChild(description);
+                    }
+                    
+                    // Create input based on type
+                    switch (arg.type) {
+                        case 'text':
+                        case 'email':
+                        case 'password':
+                        case 'url':
+                        case 'tel':
+                        case 'number':
+                            const textInput = document.createElement('input');
+                            textInput.type = arg.type;
+                            textInput.id = `additional-arg-${arg.id}`;
+                            textInput.className = 'input-field';
+                            textInput.value = arg.default || '';
+                            textInput.placeholder = `Enter ${arg.name.toLowerCase()}`;
+                            textInput.dataset.argId = arg.id;
+                            if (arg.required) textInput.required = true;
+                            fieldContainer.appendChild(textInput);
+                            break;
+                            
+                        case 'textarea':
+                            const textarea = document.createElement('textarea');
+                            textarea.id = `additional-arg-${arg.id}`;
+                            textarea.className = 'input-field';
+                            textarea.value = arg.default || '';
+                            textarea.placeholder = `Enter ${arg.name.toLowerCase()}`;
+                            textarea.dataset.argId = arg.id;
+                            if (arg.required) textarea.required = true;
+                            fieldContainer.appendChild(textarea);
+                            break;
+                            
+                        case 'select':
+                            const select = document.createElement('select');
+                            select.id = `additional-arg-${arg.id}`;
+                            select.className = 'input-field';
+                            select.dataset.argId = arg.id;
+                            if (arg.required) select.required = true;
+                            
+                            if (arg.options && Array.isArray(arg.options)) {
+                                arg.options.forEach(option => {
+                                    const optionEl = document.createElement('option');
+                                    optionEl.value = option.value;
+                                    optionEl.textContent = option.label;
+                                    if (option.value === arg.default) optionEl.selected = true;
+                                    select.appendChild(optionEl);
+                                });
+                            }
+                            
+                            fieldContainer.appendChild(select);
+                            break;
+                            
+                        case 'checkbox':
+                            const checkboxContainer = document.createElement('div');
+                            checkboxContainer.className = 'checkbox-container';
+                            
+                            const checkbox = document.createElement('input');
+                            checkbox.type = 'checkbox';
+                            checkbox.id = `additional-arg-${arg.id}`;
+                            checkbox.className = 'checkbox-input';
+                            checkbox.checked = arg.default === true;
+                            checkbox.dataset.argId = arg.id;
+                            
+                            const checkboxLabel = document.createElement('label');
+                            checkboxLabel.htmlFor = `additional-arg-${arg.id}`;
+                            checkboxLabel.className = 'checkbox-label';
+                            checkboxLabel.textContent = arg.name;
+                            
+                            checkboxContainer.appendChild(checkbox);
+                            checkboxContainer.appendChild(checkboxLabel);
+                            fieldContainer.appendChild(checkboxContainer);
+                            break;
+                            
+                        case 'radio':
+                            const radioGroup = document.createElement('div');
+                            radioGroup.className = 'radio-group';
+                            
+                            if (arg.options && Array.isArray(arg.options)) {
+                                arg.options.forEach((option, index) => {
+                                    const radioContainer = document.createElement('div');
+                                    radioContainer.className = 'radio-container';
+                                    
+                                    const radio = document.createElement('input');
+                                    radio.type = 'radio';
+                                    radio.id = `additional-arg-${arg.id}-${index}`;
+                                    radio.name = arg.id;
+                                    radio.value = option.value;
+                                    radio.className = 'radio-input';
+                                    radio.dataset.argId = arg.id;
+                                    if (option.value === arg.default) radio.checked = true;
+                                    
+                                    const radioLabel = document.createElement('label');
+                                    radioLabel.htmlFor = `additional-arg-${arg.id}-${index}`;
+                                    radioLabel.textContent = option.label;
+                                    
+                                    radioContainer.appendChild(radio);
+                                    radioContainer.appendChild(radioLabel);
+                                    radioGroup.appendChild(radioContainer);
+                                });
+                            }
+                            
+                            fieldContainer.appendChild(radioGroup);
+                            break;
+                            
+                        case 'range':
+                            const rangeContainer = document.createElement('div');
+                            rangeContainer.className = 'range-container';
+                            
+                            const rangeInput = document.createElement('input');
+                            rangeInput.type = 'range';
+                            rangeInput.id = `additional-arg-${arg.id}`;
+                            rangeInput.className = 'range-input';
+                            rangeInput.min = arg.min || 0;
+                            rangeInput.max = arg.max || 100;
+                            rangeInput.step = arg.step || 1;
+                            rangeInput.value = arg.default || (arg.min || 0);
+                            rangeInput.dataset.argId = arg.id;
+                            
+                            const rangeValues = document.createElement('div');
+                            rangeValues.className = 'range-values';
+                            
+                            const minValue = document.createElement('span');
+                            minValue.textContent = arg.min || 0;
+                            
+                            const currentValue = document.createElement('span');
+                            currentValue.className = 'range-value';
+                            currentValue.textContent = rangeInput.value;
+                            
+                            const maxValue = document.createElement('span');
+                            maxValue.textContent = arg.max || 100;
+                            
+                            rangeValues.appendChild(minValue);
+                            rangeValues.appendChild(currentValue);
+                            rangeValues.appendChild(maxValue);
+                            
+                            // Update displayed value when slider moves
+                            rangeInput.addEventListener('input', function() {
+                                currentValue.textContent = this.value;
+                            });
+                            
+                            rangeContainer.appendChild(rangeInput);
+                            rangeContainer.appendChild(rangeValues);
+                            fieldContainer.appendChild(rangeContainer);
+                            break;
+                            
+                        default:
+                            // Default to text input for unrecognized types
+                            const defaultInput = document.createElement('input');
+                            defaultInput.type = 'text';
+                            defaultInput.id = `additional-arg-${arg.id}`;
+                            defaultInput.className = 'input-field';
+                            defaultInput.value = arg.default || '';
+                            defaultInput.dataset.argId = arg.id;
+                            fieldContainer.appendChild(defaultInput);
+                    }
+                    
+                    additionalArgsContainer.appendChild(fieldContainer);
+                });
+            }
+        }
+        
+        // Helper to format time (MM:SS)
+        function formatTime(seconds) {
+            const minutes = Math.floor(seconds / 60);
+            const secs = Math.floor(seconds % 60);
+            return `${minutes}:${secs < 10 ? '0' : ''}${secs}`;
+        }
+        
+        // Load models
+        async function loadModels() {
+            try {
+                // Fetch model list (package names)
+                const response = await fetch('/api/models');
+                if (!response.ok) {
+                    throw new Error(`Failed to fetch model list: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                const modelsList = data.models || data; // Contains package names like ["f5_tts"]
+                console.log('Available model packages:', modelsList);
+                
+                if (!modelsList || !modelsList.length) {
+                    // Show no models message
+                    loadingText.textContent = 'No models installed';
+                    loadingOverlay.classList.add('hidden');
+                    noModelsMessage.style.display = 'flex';
+                    modelDropdownButton.disabled = true;
+                    
+                    // If API provided installation information, update the UI
+                    if (data.installation_info) {
+                        if (data.installation_info.command) {
+                            installCommand.textContent = data.installation_info.command;
+                        }
+                        if (data.installation_info.message) {
+                             noModelsMessage.querySelector('.empty-state-message').textContent = data.installation_info.message;
+                        }
+                                        } else {
+                         noModelsMessage.querySelector('.empty-state-message').textContent = 'Please install models using the TTSLab CLI tool.';
+                         installCommand.textContent = 'ttslab install <model-name>';
+                    }
+                    return;
+                }
+                
+                // Initialize packages state
+                allPackages = {};
+                allModels = []; // Clear global models list
+                let loadedCount = 0;
+                const totalToLoad = modelsList.length; // Total packages to process
+                
+                // Load details for each package
+                for (const packageName of modelsList) { 
+                    let manifestData = {}; // Define manifestData within the loop scope
+                    let packageModelsList = []; // Define packageModelsList within the loop scope
+                    let packageData = null; // Initialize packageData for the current package
+
+                    try {
+                        // Fetch manifest data first
+                        try {
+                            const manifestResponse = await fetch(`/api/manifest/${packageName}`);
+                            if (manifestResponse.ok) {
+                                manifestData = await manifestResponse.json();
+                                console.log(`Manifest for ${packageName}:`, manifestData);
+                            } else if (manifestResponse.status !== 404) { 
+                                console.warn(`Failed to load manifest for ${packageName}: Status ${manifestResponse.status}`);
+                                manifestData = { name: packageName }; 
+                            } else {
+                                manifestData = { name: packageName }; 
+                            }
+                        } catch (manifestError) {
+                            console.warn(`Error fetching manifest for ${packageName}:`, manifestError);
+                            manifestData = { name: packageName }; 
+                        }
+
+                        // Fetch the list of actual models (sub-models) within this package
+                        try {
+                            const packageModelsResponse = await fetch(`/api/models/${packageName}`);
+                            if (packageModelsResponse.ok) {
+                                packageModelsList = await packageModelsResponse.json();
+                                console.log(`Models for ${packageName}:`, packageModelsList);
+                                if (!Array.isArray(packageModelsList)) {
+                                     console.warn(`Received non-array model list for ${packageName}, skipping.`);
+                                     packageModelsList = []; 
+                                }
+                            } else {
+                                console.error(`Failed to fetch models for package ${packageName}: Status ${packageModelsResponse.status}`);
+                                // Update progress even if fetch fails, to avoid getting stuck
+                            loadedCount++;
+                                const progress = (loadedCount / totalToLoad) * 100;
+                                loadingProgressBar.style.width = `${progress}%`;
+                                loadingText.textContent = `Processed ${loadedCount} of ${totalToLoad} model packages`;
+                                continue; // Skip to the next package
+                            }
+                        } catch (packageModelsError) {
+                            console.error(`Error fetching models for package ${packageName}:`, packageModelsError);
+                            // Update progress even if fetch fails
+                            loadedCount++;
+                            const progress = (loadedCount / totalToLoad) * 100;
+                            loadingProgressBar.style.width = `${progress}%`;
+                            loadingText.textContent = `Processed ${loadedCount} of ${totalToLoad} model packages`;
+                            continue; // Skip to the next package
+                        }
+
+                        // Create package data structure if models exist in the list
+                        if (packageModelsList.length > 0) {
+                             packageData = { // Assign to the loop-scoped packageData
+                                displayName: manifestData.name || packageName,
+                                description: manifestData.description || '',
+                                version: manifestData.version || '',
+                                author: manifestData.author || '',
+                                models: [] // Initialize empty models array for this package
+                            };
+
+                            // Add each sub-model to the package data and global list
+                            packageModelsList.forEach(subModel => {
+                                // Ensure subModel is an object and has an id
+                                if (typeof subModel === 'object' && subModel !== null && subModel.id) {
+                                    const modelToAdd = {
+                                        ...subModel, // Spread details from the fetched sub-model
+                                        parentModel: packageName, // Use packageName here
+                                        parentModelDisplay: manifestData.name || packageName // Use packageName here
+                                    };
+                                    packageData.models.push(modelToAdd);
+                                    allModels.push(modelToAdd); // Add to global list as well
+                                } else {
+                                     console.warn(`Skipping invalid sub-model data for package ${packageName}:`, subModel);
+                                }
+                            });
+
+                            // Only add the package if it actually contains valid models after filtering
+                            if (packageData.models.length > 0) {
+                                allPackages[packageName] = packageData; // Store the complete package data
+                } else {
+                                 console.warn(`Package ${packageName} has no valid models after processing.`);
+                            }
+                        } else {
+                             console.warn(`No models found or returned for package ${packageName}`);
+                        }
+
+                        // Update progress (based on packages processed)
+                        loadedCount++;
+                        const progress = (loadedCount / totalToLoad) * 100;
+                        loadingProgressBar.style.width = `${progress}%`;
+                        loadingText.textContent = `Processed ${loadedCount} of ${totalToLoad} model packages`;
+
+                    } catch (error) {
+                        console.error(`Error processing package ${packageName}:`, error);
+                        // Update progress even on inner error to avoid getting stuck
+                        loadedCount++; 
+                        const progress = (loadedCount / totalToLoad) * 100;
+                        loadingProgressBar.style.width = `${progress}%`;
+                        loadingText.textContent = `Processed ${loadedCount} of ${totalToLoad} model packages`;
+                    }
+                } // End of for...of loop
+
+                // Check if any packages were actually loaded and contain models
+                if (Object.keys(allPackages).length === 0) {
+                     loadingText.textContent = 'No valid models found.';
+                     noModelsMessage.style.display = 'flex';
+                     noModelsMessage.querySelector('.empty-state-title').textContent = 'No Models Available';
+                     noModelsMessage.querySelector('.empty-state-message').textContent = 'No compatible models were found or loaded successfully.';
+                     modelDropdownButton.disabled = true;
+                      // Short delay before hiding overlay
+                     setTimeout(() => loadingOverlay.classList.add('hidden'), 100);
+                     return;
+                }
+
+                // Render packages AFTER processing all of them
+                modelPackagesContainer.innerHTML = ''; // Clear previous entries before rendering
+                Object.entries(allPackages).forEach(([pkgName, pkgData]) => {
+                    buildPackageElement(pkgName, pkgData);
+                });
+
+                // Hide loading overlay
+                loadingText.textContent = 'All models loaded';
+                // Short delay to allow rendering before hiding overlay
+                setTimeout(() => {
+                     loadingOverlay.classList.add('hidden');
+                }, 100);
+                
+                modelDropdownButton.disabled = false; // Ensure button is enabled if models loaded
+
+            } catch (error) {
+                console.error('Fatal error loading models:', error);
+                loadingText.textContent = 'Error loading models';
+                 // Hide overlay even on fatal error, show message
+                setTimeout(() => loadingOverlay.classList.add('hidden'), 100); 
+                
+                noModelsMessage.style.display = 'flex'; 
+                noModelsMessage.querySelector('.empty-state-title').textContent = 'Failed to Load Models';
+                noModelsMessage.querySelector('.empty-state-message').textContent = `Could not retrieve or process model list: ${error.message}. Please check the console or server logs.`;
+                modelDropdownButton.disabled = true;
+            }
+        }
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', loadModels);
+    </script>
+</body>
+</html>
